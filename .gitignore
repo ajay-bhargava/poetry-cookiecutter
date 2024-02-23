@@ -20,7 +20,10 @@ data/
 .env
 
 # Hypothesis
-.hypothesis/
+.hypothesis/# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+notebooks/
 
 # macOS
 .DS_Store

@@ -9,19 +9,11 @@
 ##########################
 
 # syntax=docker/dockerfile:1
-ARG PYTHON_VERSION={{ cookiecutter.python_version }}
-FROM {{ cookiecutter.docker_image }} AS base
+ARG PYTHON_VERSION=3.11
+FROM python:$PYTHON_VERSION-slim AS base
 
 # Remove docker-clean so we can keep the apt cache in Docker build cache.
 RUN rm /etc/apt/apt.conf.d/docker-clean
-{%- if cookiecutter.development_environment == "strict" %}
-
-# Configure Python to print tracebacks on crash [1], and to not buffer stdout and stderr [2].
-# [1] https://docs.python.org/3/using/cmdline.html#envvar-PYTHONFAULTHANDLER
-# [2] https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
-ENV PYTHONFAULTHANDLER 1
-ENV PYTHONUNBUFFERED 1
-{%- endif %}
 
 # Create a non-root user and switch to it [1].
 # [1] https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
@@ -33,12 +25,12 @@ RUN groupadd --gid $GID user && \
 USER user
 
 # Create and activate a virtual environment.
-ENV VIRTUAL_ENV /opt/{{ cookiecutter.__package_name_kebab_case }}-env
+ENV VIRTUAL_ENV /opt/poetry-cookiecutter-env
 ENV PATH $VIRTUAL_ENV/bin:$PATH
 RUN python -m venv $VIRTUAL_ENV
 
 # Set the working directory.
-WORKDIR /workspaces/{{ cookiecutter.__package_name_kebab_case }}/
+WORKDIR /workspaces/poetry-cookiecutter/
 
 ####################################
 #   _____           _              
@@ -72,13 +64,10 @@ RUN --mount=type=cache,target=/var/cache/apt/ \
 USER user
 
 # Install the run time Python dependencies in the virtual environment.
-COPY --chown=user:user poetry.lock* pyproject.toml /workspaces/{{ cookiecutter.__package_name_kebab_case }}/
+COPY --chown=user:user poetry.lock* pyproject.toml /workspaces/poetry-cookiecutter/
 RUN mkdir -p /home/user/.cache/pypoetry/ && mkdir -p /home/user/.config/pypoetry/ && \
-    mkdir -p src/{{ cookiecutter.__package_name_snake_case }}/ && touch src/{{ cookiecutter.__package_name_snake_case }}/__init__.py && touch README.md
+    mkdir -p src/poetry_cookiecutter/ && touch src/poetry_cookiecutter/__init__.py && touch README.md
 RUN --mount=type=cache,uid=$UID,gid=$GID,target=/home/user/.cache/pypoetry/ \
-    {%- if cookiecutter.private_package_repository_name %}
-    --mount=type=secret,id=poetry-auth,uid=$UID,gid=$GID,target=/home/user/.config/pypoetry/auth.toml \
-    {%- endif %}
     poetry install --only main --no-interaction
 
 ################################################################
@@ -102,24 +91,18 @@ USER root
 RUN --mount=type=cache,target=/var/cache/apt/ \
     --mount=type=cache,target=/var/lib/apt/ \
     apt-get update && \
-    apt-get install --no-install-recommends --yes curl git gnupg ssh sudo vim zsh awscli gh less {%-if cookiecutter.with_ml_inference|int %} nodejs npm {%- endif %} && \
+    apt-get install --no-install-recommends --yes curl git gnupg ssh sudo vim zsh awscli gh less && \
     sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- "--yes" && \
-    {%-if cookiecutter.with_ml_inference|int %}
-    npm install serverless -g && \
-    {%- endif %}
     usermod --shell /usr/bin/zsh user && \
     echo 'user ALL=(root) NOPASSWD:ALL' > /etc/sudoers.d/user && chmod 0440 /etc/sudoers.d/user
 USER user
 
 # Install the development Python dependencies in the virtual environment.
 RUN --mount=type=cache,uid=$UID,gid=$GID,target=/home/user/.cache/pypoetry/ \
-    {%- if cookiecutter.private_package_repository_name %}
-    --mount=type=secret,id=poetry-auth,uid=$UID,gid=$GID,target=/home/user/.config/pypoetry/auth.toml \
-    {%- endif %}
     poetry install --no-interaction
 
 # Persist output generated during docker build so that we can restore it in the dev container.
-COPY --chown=user:user .pre-commit-config.yaml /workspaces/{{ cookiecutter.__package_name_kebab_case }}/
+COPY --chown=user:user .pre-commit-config.yaml /workspaces/poetry-cookiecutter/
 RUN mkdir -p /opt/build/poetry/ && cp poetry.lock /opt/build/poetry/ && \
     git init && pre-commit install --install-hooks && \
     mkdir -p /opt/build/git/ && cp .git/hooks/commit-msg .git/hooks/pre-commit /opt/build/git/
@@ -140,12 +123,6 @@ RUN git clone --branch v$ANTIDOTE_VERSION --depth=1 https://github.com/mattmc3/a
     echo 'bindkey "^[[B" history-beginning-search-forward' >> ~/.zshrc && \
     mkdir ~/.history/ && \
     zsh -c 'source ~/.zshrc'
-{%- if cookiecutter.private_package_repository_name %}
-
-# Enable Poetry to read the private package repository credentials.
-RUN ln -s /run/secrets/poetry-auth /home/user/.config/pypoetry/auth.toml
-{%- endif %}
-{%- if cookiecutter.with_fastapi_api|int or cookiecutter.with_streamlit_app|int or cookiecutter.with_typer_cli|int %}
 
 ##########################
 #   ____  _     _    
@@ -165,34 +142,5 @@ COPY --from=poetry $VIRTUAL_ENV $VIRTUAL_ENV
 COPY --chown=user:user . .
 
 # Expose the application.
-{%- if cookiecutter.with_fastapi_api|int or cookiecutter.with_streamlit_app|int %}
-ENTRYPOINT ["/opt/{{ cookiecutter.__package_name_kebab_case }}-env/bin/poe"]
-CMD [{% if cookiecutter.with_fastapi_api|int %}"api"{% else %}"app"{% endif %}]
-{%- else %}
-ENTRYPOINT ["/opt/{{ cookiecutter.__package_name_kebab_case }}-env/bin/{{ cookiecutter.__package_name_kebab_case }}"]
-CMD []
-{%- endif %}
-{%- endif %}
-
-{%- if cookiecutter.with_ml_training|int %}
-################################################################
-#    _____                                  _             
-#   / ____|                                | |            
-#  | (___   __ _  __ _  ___ _ __ ___   __ _| | _____ _ __ 
-#   \___ \ / _` |/ _` |/ _ \ '_ ` _ \ / _` | |/ / _ \ '__|
-#   ____) | (_| | (_| |  __/ | | | | | (_| |   <  __/ |   
-#  |_____/ \__,_|\__, |\___|_| |_| |_|\__,_|_|\_\___|_|   
-#                 __/ |                                   
-#                |___/                                    
-#
-################################################################
-
-FROM 763104351884.dkr.ecr.us-east-1.amazonaws.com/pytorch-training:2.0-gpu-py310 as sagemaker
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir wandb dvc"[s3]" && \
-    pip freeze
-ARG KEY_ID=""
-ARG SECRET_KEY=""
-ENV AWS_ACCESS_KEY_ID=${KEY_ID}
-ENV AWS_SECRET_ACCESS_KEY=${SECRET_KEY}
-{%- endif %}
+ENTRYPOINT ["/opt/poetry-cookiecutter-env/bin/poe"]
+CMD ["app"]

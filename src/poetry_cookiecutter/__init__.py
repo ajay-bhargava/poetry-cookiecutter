@@ -1,0 +1,1 @@
+"""Poetry Cookiecutter package."""

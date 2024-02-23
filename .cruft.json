@@ -1,0 +1,37 @@
+{
+  "template": "/home/runner/work/poetry-cookiecutter/poetry-cookiecutter/template-repository",
+  "commit": "99325571dc7cb578cb3b23a43c1cf86a084b48a1",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "organization_name": "With Context",
+      "package_name": "Poetry Cookiecutter",
+      "github_repository_id": "735676626",
+      "package_description": "Streamlit app for deploying an EDA tool that will analyze some data.",
+      "package_url": "https://github.com/ajay-bhargava/poetry-cookiecutter",
+      "author_name": "Ajay Bhargava",
+      "author_email": "bhargava.ajay@gmail.com",
+      "python_version": "3.11",
+      "docker_image": "python:$PYTHON_VERSION-slim",
+      "development_environment": "simple",
+      "with_conventional_commits": "0",
+      "with_fastapi_api": "0",
+      "with_jupyter_lab": "1",
+      "with_pydantic_typing": "0",
+      "with_sentry_logging": "0",
+      "with_streamlit_app": "1",
+      "with_typer_cli": "0",
+      "with_ml_training": "0",
+      "with_ml_inference": "0",
+      "continuous_integration": "GitHub",
+      "docstring_style": "NumPy",
+      "private_package_repository_name": "",
+      "private_package_repository_url": "",
+      "__organization_name_kebab_case": "with-context",
+      "__package_name_kebab_case": "poetry-cookiecutter",
+      "__package_name_snake_case": "poetry_cookiecutter",
+      "_template": "/home/runner/work/poetry-cookiecutter/poetry-cookiecutter/template-repository"
+    }
+  },
+  "directory": null
+}

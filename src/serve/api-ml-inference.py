@@ -1,4 +1,4 @@
-"""{{cookiecutter.package_name}} REST API."""
+"""Poetry Cookiecutter REST API."""
 import json
 import os
 
@@ -29,7 +29,7 @@ app = FastAPI(
 @app.get("/")
 def read_root() -> str:
     """Read root."""
-    return "You have reached the {{cookiecutter.package_name}} REST API Endpoint."
+    return "You have reached the Poetry Cookiecutter REST API Endpoint."
 
 
 @app.post("/predict")
